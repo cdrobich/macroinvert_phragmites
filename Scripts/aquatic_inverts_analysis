@@ -8,6 +8,80 @@ install_github("GuillemSalazar/EcolUtils")
 
 library(EcolUtils)
 
+library(agricolae)
+library(Hmisc)
+library(car)
+library(lmPerm)
+
+library(performance)
+library(see)
+
+
+# Univariate Analyses ---------------------------------------------------------------
+
+
+benthic.uni <- read.csv("Data/Aquatic/benthic_invertebrates_univariate.csv")
+
+## Permutational ANOVAs
+
+
+# Macroinvertebrate densities
+abun.perm <- lmp(abundance ~ Habitat, data = benthic.uni, 
+                 perm = "Prob", Ca = 0.0001, maxIter = 999)
+
+summary(abun.perm)
+Anova(abun.perm)
+
+
+ab.perm <- HSD.test(abun.perm, "Habitat")
+
+check_model(abund.perm)
+
+check_homogeneity(abun.perm)
+check_heteroscedasticity(abund.perm)
+
+
+# Taxa richness 
+rich.perm <- lmp(rich ~ Habitat, data = benthic.uni, 
+                 perm = "Prob", Ca = 0.0001, maxIter = 999)
+
+summary(rich.perm)
+Anova(rich.perm)
+
+
+check_model(rich.perm)
+
+check_homogeneity(rich.perm)
+check_heteroscedasticity(rich.perm)
+
+
+# Evenness 
+pie.perm <- lmp(J ~ Habitat, data = benthic.uni, 
+                 perm = "Prob", maxIter = 999)
+
+summary(pie.perm)
+Anova(pie.perm)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Multivariate Analyses ---------------------------------------------------------------
 # Load Data ---------------------------------------------------------------
 
 benthic <- read.csv("Data/Aquatic/benthic_inverts_relativized.csv") # occurrences <=2 removed, relativized

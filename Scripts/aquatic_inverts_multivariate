@@ -1,0 +1,156 @@
+# Load packages -----------------------------------------------------------
+
+library(tidyverse) 
+library(vegan) 
+
+library(devtools)
+install_github("GuillemSalazar/EcolUtils")
+
+library(EcolUtils)
+
+# Load Data ---------------------------------------------------------------
+
+benthic <- read.csv("Data/Aquatic/benthic_inverts_relativized.csv") # occurrences <=2 removed, relativized
+
+
+benthic.data <- benthic %>% select(Oligochaetae:Leptoceridae)
+benthic.env <- benthic %>% select(ID:Collection.date)
+benthic.vector <- benthic %>% select(Water_Depth:Leptoceridae)
+
+bth.tx <- as.data.frame(sapply(benthic.data, function(col) sum(col))) # how many unique values in column
+
+# Multivariate Analyses ---------------------------------------------------
+
+# perMANOVA ---------------------------------------------------------------
+
+(per.treat <- adonis2(benthic.data ~ Habitat, data = benthic,
+                     permutations = 999, method = "bray"))
+
+
+#         Df SumOfSqs      R2      F Pr(>F)    
+#Habitat   2   2.2329 0.28701 4.4279  0.001 ***
+#Residual 22   5.5471 0.71299                  
+#Total    24   7.7800 1.00000                  
+
+
+### Betadisper; homogeneity of groups dispersion ####
+
+bugs.b <- vegdist(benthic.data, method = "bray")
+
+groupsb <- factor(benthic$Habitat)
+
+(dispersionb <- betadisper(bugs.b, groupsb)) # spatial median default
+
+#Homogeneity of multivariate dispersions
+##
+##Call: betadisper(d = bugs.b, group = groupsb)
+##
+##No. of Positive Eigenvalues: 19
+##No. of Negative Eigenvalues: 5
+##
+##Average distance to median:
+##Invaded   Treated Uninvaded 
+##0.4468    0.4541    0.4860 
+##
+##Eigenvalues for PCoA axes:
+##  (Showing 8 of 24 eigenvalues)
+##PCoA1  PCoA2  PCoA3  PCoA4  PCoA5  PCoA6  PCoA7  PCoA8 
+#1.5648 1.2761 1.0066 0.7229 0.5963 0.5049 0.4730 0.4529 
+
+anova(dispersionb)
+
+#Analysis of Variance Table
+#
+#Response: Distances
+#Df   Sum Sq   Mean Sq F value Pr(>F)
+#Groups     2 0.007034 0.0035169  0.3297 0.7227
+#Residuals 22 0.234694 0.0106679 
+
+
+permutest(dispersionb, pairwise = TRUE, permutations = 999)
+
+#Permutation test for homogeneity of multivariate dispersions
+#Permutation: free
+#Number of permutations: 999
+#
+#Response: Distances
+#           Df   Sum Sq   Mean Sq      F N.Perm Pr(>F)
+#Groups     2 0.007034 0.0035169 0.3297    999  0.766
+#Residuals 22 0.234694 0.0106679                     
+#
+#Pairwise comparisons:
+#  (Observed p-value below diagonal, permuted p-value above diagonal)
+#Invaded Treated Uninvaded
+#Invaded           0.92000     0.313
+#Treated   0.90261             0.574
+#Uninvaded 0.30650 0.55309  
+
+plot(dispersionb)
+boxplot(dispersionb,
+        xlab = " ") # actually look really good!
+
+
+(adonis.pair(bugs.b, groupsb, nper = 1000, corr.method = "bonferroni"))
+
+#              combination SumsOfSqs   MeanSqs  F.Model        R2     P.value P.value.corrected
+#1   Invaded <-> Restored 0.9649239 0.9649239 3.946800 0.2083096 0.000999001       0.002997003
+#2  Invaded <-> Uninvaded 1.0586760 1.0586760 4.140050 0.2282270 0.000999001       0.002997003
+#3 Restored <-> Uninvaded 1.3160709 1.3160709 4.999042 0.2499641 0.000999001       0.002997003
+
+
+# NMDS  -------------------------------------------------------------------
+
+## stress plot/ see how many axes make sense
+
+k_vec <- 1:10 #dimensions 1 - 10
+stress <- numeric(length(k_vec)) # stress of each model put here
+dune_dij <- metaMDSdist(benthic.data)
+set.seed(25)
+for(i in seq_along(k_vec)) {
+  sol <- metaMDSiter(dune_dij, k = i, # you can tell I lifted this from a tutorial on the dune package
+                     trace = FALSE)
+  stress[i] <- sol$stress
+}
+
+plot(stress) # 3D makes sense
+
+
+# NMDS analysis code ------------------------------------------------------
+
+set.seed(120) 
+
+nms.invert <- metaMDS(benthic.data, distance = "bray", # species data, bray-curtis dissimilarity
+                      autotransform = FALSE,  # NMDS will do autotransformations for you
+                      k = 3, trymax = 1000)   # k = number of axes
+nms.invert
+
+#global Multidimensional Scaling using monoMDS
+
+#Data:     benthic.data 
+#Distance: bray 
+
+#Dimensions: 3 
+#Stress:     0.1450098 
+#Stress type 1, weak ties
+#Two convergent solutions found after 28 tries
+#Scaling: centring, PC rotation, halfchange scal
+
+# look at points and the stress real quick
+layout(matrix(1:2, ncol = 2))
+plot(nms.invert, main = "Invertebrate NMDS plot"); stressplot(nms.invert, main = "Shepard plot")
+layout(1)
+
+ordiplot(nms.invert, type = "n")
+orditorp(nms.invert, display = "species")
+orditorp(nms.invert, display = "sites")
+
+# how many iterations of the NMDS
+nms.invert$iters 
+
+# Goodness of fit
+(g <- goodness(nms.invert)) # smaller the number the better the fit
+sum(g^2)
+nms.invert$stress^2  # 0.02102784
+
+1-nms.invert$stress^2 # 0.9789722 
+

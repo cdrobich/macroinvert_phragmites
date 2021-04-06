@@ -1,0 +1,158 @@
+# Packages ----------------------------------------------------------------
+
+library(tidyverse) 
+library(vegan) 
+
+library(agricolae) 
+library(Hmisc)
+library(car)
+
+library(lme4) # GLMM
+library(MuMIn)
+library(AICcmodavg)
+library(viridis)
+
+
+library(performance)
+library(see)
+
+library(lmPerm)
+
+
+# Univariate analyses -------------------------------------------------------
+# Data Import -------------------------------------------------------------
+
+invert <- read.csv("Data/Emerging/emerging_invertebrate_univariate.csv")
+
+rich.glmm <- glmer(rich ~ Factor  + (1|N),
+                     data = invert.2018, family = poisson(link = "log"))
+
+summary(rich.glmm)
+r2_nakagawa(rich.glmm)
+
+# examine the residuals 
+
+plot(rich.glmm)
+qqnorm(resid(rich.glmm))
+qqline(resid(rich.glmm))
+
+check_overdispersion(rich.glmm) # no overdispersion detected
+check_singularity(rich.glmm) # FALSE
+check_model(rich.glmm)
+
+
+# Permutational Anovas
+
+# Abundance
+
+abun.perm.e <- lmp(abundance ~ Treatment, data = invert.2018, 
+                 perm = "Prob", Ca = 0.0001, maxIter = 999)
+
+summary(abun.perm.e)
+Anova(abun.perm.e)
+
+perm.em.ab <- HSD.test(abun.perm.e, "Treatment")
+
+# Pielous
+
+pie.perm.e <- lmp(J ~ Treatment, data = invert.2018, 
+                   perm = "Prob", Ca = 0.0001, maxIter = 999)
+
+summary(pie.perm.e)
+Anova(pie.perm.e)
+
+perm.pie.t <- HSD.test(pie.perm.e, "Treatment")
+
+
+# Multivariate analyses -------------------------------------------------------
+
+invert.18 <- read.csv("Data/Emerging/emerging_2018.csv") # rares removed and relativized by column max
+
+invert.18.taxa <- invert.18 %>% select(Araneae:Crambidae)
+invert.18.ev <- invert.18 %>% select(Site:ZIZPALUS)
+invert.18.vectors <- invert.18 %>% select(Canopy.Height:Crambidae)
+
+
+# BETADISPER ---------------------------------------------------------
+
+invert.b <- vegdist(invert.18.taxa, method = "bray")
+
+trt <- factor(invert.18$Treatment)
+
+(emerg.disp <- betadisper(invert.b, trt)) 
+
+anova(emerg.disp)
+
+permutest(emerg.disp, pairwise = TRUE, permutations = 999)
+
+
+boxplot(emerg.disp,
+        xlab = " ")
+        
+       
+       
+# perMANOVA ----------------------------------------------------------
+
+
+(inv.18.p <- adonis2(invert.18.taxa ~ Treatment,
+                    data = invert.18,
+                    permutations = 999, method = "bray"))
+        
+        
+(adonis.pair(invert.b, trt, 
+             nper = 999, corr.method = "bonferroni"))
+
+
+
+
+# NMDS ---------------------------------------------------------------
+
+## stress plot/ see how many axes make sense
+
+k_vec <- 1:10 #dimensions 1 - 10
+stress <- numeric(length(k_vec)) # stress of each model put here
+dune_dij <- metaMDSdist(invert.18.taxa)
+
+set.seed(25)
+
+for(i in seq_along(k_vec)) {
+  sol <- metaMDSiter(dune_dij, k = i, 
+                     trace = FALSE)
+  stress[i] <- sol$stress
+}
+
+plot(stress) # 3D makes sense
+
+#### NMDS analysis 
+
+set.seed(120) 
+
+nms.invert18 <- metaMDS(invert.18.taxa, distance = "bray", # species data, bray-curtis dissimilarity
+                      autotransform = FALSE, 
+                      k = 3, trymax = 1000)   # k = number of axes
+nms.invert18
+
+
+layout(matrix(1:2, ncol = 2))
+plot(nms.invert18, main = "Invertebrate NMDS plot"); stressplot(nms.invert18, main = "Shepard plot")
+layout(1)
+
+ordiplot(nms.invert18, type = "n")
+orditorp(nms.invert18, display = "species")
+orditorp(nms.invert18, display = "sites")
+
+
+ordiplot(nms.invert18, type = "n", choices = c(1,3))
+orditorp(nms.invert18, display = "species", choices = c(1,3))
+orditorp(nms.invert18, display = "sites", choices = c(1,3))
+
+
+# how many iterations of the NMDS
+nms.invert18$iters 
+
+# Goodness of fit
+(g <- goodness(nms.invert18)) # smaller the number the better the fit
+sum(g^2)
+nms.invert18$stress^2  # 0.02530676
+
+1-nms.invert18$stress^2 # 0.9746932

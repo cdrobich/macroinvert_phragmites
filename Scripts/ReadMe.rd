@@ -1,7 +1,4 @@
-# Scripts associated with data analysis
-
-
-### Scripts
+## Scripts associated with data analysis
 
 - `emerging_inverts_analysis` - univariate (GLMM and permutational GLMs) and multivariate analyses (BETADISPER, perMANOVA, NMDS) for emerging    invertebrates
 - `aquatic_inverts_analysis` - univariate (permutational GLMs) and multivariate analyses (BETADISPER, perMANOVA, NMDS) for emerging invertebrates

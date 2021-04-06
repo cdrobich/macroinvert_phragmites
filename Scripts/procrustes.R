@@ -9,9 +9,9 @@ library(viridis)
 
 
 # Load data -----------------------------------------------------------
-emerging <- read.csv("Data/Emerging/Procrustes/ermerging_procrustes.csv")
+emerging <- read.csv("Data/Procrustes/ermerging_procrustes.csv")
 
-aquatic <- read.csv("Data/Emerging/Procrustes/aquatic_procrustes.csv")
+aquatic <- read.csv("Data/Procrustes/aquatic_procrustes.csv")
 
 
 # Aquatic invertebrate data prep ------------------------------------------

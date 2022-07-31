@@ -1,4 +1,4 @@
-### Differences in above-ground resource acquisition and niche overlap 
+### Control of invasive *Phragmites australis* (European common reed) alters macroinvertebrate communities
 
 The removal of an established invasive species can have significant effects on native communities. We examined how macroinvertebrates communities responded to the glyphosate-based herbicide removal of invasive *Phragmites australis* ([European common reed](https://www.thestar.com/news/insight/2012/08/11/phragmites_australis_is_canadas_worst_invasive_plant.html)) in a Lake Erie coastal marsh (Long Point, ON). 
 
